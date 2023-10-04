@@ -13,14 +13,19 @@ app.get("/", async (req, res) => {
 
 app.get("/api/blog-stats", async (req, res) => {
   try {
-    const result = await axios.get(API_URL, {
+    const response = await fetch(API_URL, {
+      method: "GET",
       headers: {
         "x-hasura-admin-secret":
           "32qR4KmXOIpsGPQKMqEJHGJS27G5s7HdSKO3gdtQd2kv5e852SiYwWNfxkZOBuQ6",
       },
     });
-    const analysis = analyse(result.data);
-    res.send(JSON.stringify(analysis));
+    if (!response.ok) {
+      throw new Error(`Failed to fetch data. Status: ${response.status}`);
+    }
+    const result = await response.json();
+    const analysis = analyse(result);
+    res.status(200).send(JSON.stringify(analysis));
   } catch (error) {
     res.status(404).send(error.message);
   }
@@ -42,22 +47,29 @@ const analyse = _.memoize(function analyse(data) {
 
 app.get("/api/blog-search", async (req, res) => {
   try {
-    const result = await axios.get(API_URL, {
+    const response = await fetch(API_URL, {
+      method: "GET",
       headers: {
         "x-hasura-admin-secret":
           "32qR4KmXOIpsGPQKMqEJHGJS27G5s7HdSKO3gdtQd2kv5e852SiYwWNfxkZOBuQ6",
       },
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch data. Status: ${response.status}`);
+    }
+
+    const result = await response.json();
     const searchValue = req.query.query;
     if (searchValue) {
-      const searchResult = searchBlogs(result.data, searchValue);
-      if (searchResult) {
-        res.send(JSON.stringify(searchResult));
+      const searchResult = searchBlogs(result, searchValue);
+      if (searchResult.length > 0) {
+        res.status(200).send(JSON.stringify(searchResult));
       } else {
-        res.send("No Blogs found");
+        res.status(404).send("No Blogs found");
       }
     } else {
-      res.send(JSON.stringify(result.data));
+      res.status(200).send(JSON.stringify(result));
     }
   } catch (error) {
     res.status(404).send(error.message);
